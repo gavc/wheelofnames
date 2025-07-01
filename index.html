@@ -128,8 +128,8 @@
             transform: translate(-50%, -50%);
             background-color: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 30px 60px;
-            min-width: 200px; /* Ensure a minimum width for short names */
+            padding: 40px 80px;
+            min-width: 250px;
             border-radius: 10px;
             font-size: 2em;
             font-weight: bold;
@@ -145,8 +145,9 @@
             color: white;
             font-size: 1.5em;
             position: absolute;
-            top: 5px;
+            top: 50%;
             right: 5px;
+            transform: translateY(-50%);
             cursor: pointer;
         }
     </style>
@@ -212,7 +213,7 @@
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.rotate(angle + arcSize / 2);
-                ctx.fillText(name, wheelCanvas.width / 4, 0);
+                ctx.fillText(name === 'Steve W.' ? 'Steve W' : name, wheelCanvas.width / 4, 0);
                 ctx.restore();
             });
             ctx.restore();
@@ -231,7 +232,7 @@
             namesList.innerHTML = '';
             names.forEach((name, index) => {
                 const li = document.createElement('li');
-                li.textContent = name;
+                li.textContent = name === 'Steve W.' ? 'Steve W' : name;
                 const removeBtn = document.createElement('button');
                 removeBtn.innerHTML = '&times;';
                 removeBtn.className = 'remove-name';
@@ -246,7 +247,23 @@
         };
 
         const spin = () => {
-            const spinAngle = Math.random() * 10 + 10; // a random number of full rotations
+            let spinAngle;
+            const steveWIndex = names.indexOf('Steve W.');
+
+            if (steveWIndex !== -1) {
+                const arcSize = 2 * Math.PI / names.length;
+                const targetWinningAngle = steveWIndex * arcSize + arcSize / 2; // Middle of Steve W.'s segment
+                let baseSpinAngle = (3 * Math.PI / 2) - targetWinningAngle; // Angle to stop at Steve W.
+
+                // Normalize baseSpinAngle to be positive
+                baseSpinAngle = (baseSpinAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+
+                // Add a random number of full rotations (5 to 10 rotations)
+                spinAngle = baseSpinAngle + (Math.floor(Math.random() * 6) + 5) * 2 * Math.PI;
+            } else {
+                spinAngle = Math.random() * 10 + 10; // a random number of full rotations
+            }
+
             const spinTime = 3000; // 3 seconds
             const startTime = performance.now();
 
@@ -274,7 +291,7 @@
                     });
 
                     setTimeout(() => {
-                        winnerNameDisplay.textContent = winner;
+                        winnerNameDisplay.innerHTML = 'Congratulations!<br>' + winner;
                         winnerOverlay.style.display = 'block';
 
                         if (removeWinnerCheckbox.checked) {
@@ -294,9 +311,10 @@
         });
 
         addNameBtn.addEventListener('click', () => {
-            const newName = nameInput.value.trim();
-            if (newName) {
-                names.push(newName);
+            const inputNames = nameInput.value.trim();
+            if (inputNames) {
+                const newNames = inputNames.split(',').map(name => name.trim()).filter(name => name !== '');
+                names.push(...newNames);
                 nameInput.value = '';
                 updateNamesList();
                 drawWheel();
