@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wheel of Names</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #ecf0f1;
+            --font-color: #2c3e50;
+            --light-gray: #bdc3c7;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--font-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-shadow: 1px 1px 2px var(--light-gray);
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto 20px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        canvas:active {
+            transform: scale(0.98);
+        }
+
+        .controls {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border: 2px solid var(--light-gray);
+            border-radius: 5px;
+            width: 200px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #spinBtn {
+            background-color: var(--secondary-color);
+        }
+
+        #spinBtn:hover {
+            background-color: #27ae60;
+        }
+
+        #namesList {
+            list-style: none;
+            padding: 0;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--light-gray);
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        #namesList li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        #namesList li:last-child {
+            border-bottom: none;
+        }
+
+        .remove-name {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 22px;
+            text-align: center;
+            padding: 0;
+        }
+
+        .remove-name:hover {
+            background-color: #c0392b;
+        }
+
+        #winnerOverlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 30px 60px;
+            min-width: 200px; /* Ensure a minimum width for short names */
+            border-radius: 10px;
+            font-size: 2em;
+            font-weight: bold;
+            display: none; /* Hidden by default */
+            z-index: 1000;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        #winnerOverlay button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Wheel of Names</h1>
+        <canvas id="wheelCanvas" width="400" height="400"></canvas>
+        <div class="controls">
+            <input type="text" id="nameInput" placeholder="Enter a name">
+            <button id="addNameBtn">Add Name</button>
+            <button id="spinBtn">Spin!</button>
+            <div style="margin-top: 10px;">
+                <input type="checkbox" id="removeWinnerCheckbox">
+                <label for="removeWinnerCheckbox">Remove Winner</label>
+            </div>
+        </div>
+        <h2>Names:</h2>
+        <ul id="namesList"></ul>
+        <div id="winnerOverlay">
+            <span id="winnerNameDisplay"></span>
+            <button id="winnerOverlayCloseBtn">&times;</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script>
+        const wheelCanvas = document.getElementById('wheelCanvas');
+        const ctx = wheelCanvas.getContext('2d');
+        const nameInput = document.getElementById('nameInput');
+        const addNameBtn = document.getElementById('addNameBtn');
+        const spinBtn = document.getElementById('spinBtn');
+        const namesList = document.getElementById('namesList');
+        const winnerOverlay = document.getElementById('winnerOverlay');
+        const winnerNameDisplay = document.getElementById('winnerNameDisplay');
+        const winnerOverlayCloseBtn = document.getElementById('winnerOverlayCloseBtn');
+        const removeWinnerCheckbox = document.getElementById('removeWinnerCheckbox');
+
+        let names = ['Alice', 'Bob', 'Charlie', 'David'];
+        let colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#1abc9c'];
+        let currentAngle = 0;
+        let spinTimeout = null;
+
+        const drawWheel = () => {
+            const arcSize = 2 * Math.PI / names.length;
+            ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+            ctx.save();
+            ctx.translate(wheelCanvas.width / 2, wheelCanvas.height / 2);
+            ctx.rotate(currentAngle);
+
+            names.forEach((name, i) => {
+                const angle = i * arcSize;
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, wheelCanvas.width / 2, angle, angle + arcSize);
+                ctx.lineTo(0, 0);
+                ctx.fill();
+
+                ctx.save();
+                ctx.fillStyle = 'white';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.rotate(angle + arcSize / 2);
+                ctx.fillText(name, wheelCanvas.width / 4, 0);
+                ctx.restore();
+            });
+            ctx.restore();
+
+            // Draw the pointer
+            ctx.fillStyle = '#2c3e50';
+            ctx.beginPath();
+            ctx.moveTo(wheelCanvas.width / 2 - 10, 0);
+            ctx.lineTo(wheelCanvas.width / 2 + 10, 0);
+            ctx.lineTo(wheelCanvas.width / 2, 30);
+            ctx.closePath();
+            ctx.fill();
+        };
+
+        const updateNamesList = () => {
+            namesList.innerHTML = '';
+            names.forEach((name, index) => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                const removeBtn = document.createElement('button');
+                removeBtn.innerHTML = '&times;';
+                removeBtn.className = 'remove-name';
+                removeBtn.onclick = () => {
+                    names.splice(index, 1);
+                    updateNamesList();
+                    drawWheel();
+                };
+                li.appendChild(removeBtn);
+                namesList.appendChild(li);
+            });
+        };
+
+        const spin = () => {
+            const spinAngle = Math.random() * 10 + 10; // a random number of full rotations
+            const spinTime = 3000; // 3 seconds
+            const startTime = performance.now();
+
+            const animate = (currentTime) => {
+                const elapsedTime = currentTime - startTime;
+                const progress = Math.min(elapsedTime / spinTime, 1);
+                const easeOutProgress = 1 - Math.pow(1 - progress, 3);
+
+                currentAngle = easeOutProgress * spinAngle;
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    const arcSize = 2 * Math.PI / names.length;
+                    const winningAngle = ( ( (3 * Math.PI / 2) - currentAngle) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+                    const winningIndex = Math.floor(winningAngle / arcSize);
+                    const winner = names[winningIndex];
+                    
+                    // Celebrate!
+                    confetti({
+                        particleCount: 150,
+                        spread: 90,
+                        origin: { y: 0.6 }
+                    });
+
+                    setTimeout(() => {
+                        winnerNameDisplay.textContent = winner;
+                        winnerOverlay.style.display = 'block';
+
+                        if (removeWinnerCheckbox.checked) {
+                            names.splice(winningIndex, 1);
+                            updateNamesList();
+                            drawWheel();
+                        }
+                    }, 100);
+                }
+            };
+
+            requestAnimationFrame(animate);
+        };
+
+        winnerOverlayCloseBtn.addEventListener('click', () => {
+            winnerOverlay.style.display = 'none';
+        });
+
+        addNameBtn.addEventListener('click', () => {
+            const newName = nameInput.value.trim();
+            if (newName) {
+                names.push(newName);
+                nameInput.value = '';
+                updateNamesList();
+                drawWheel();
+            }
+        });
+
+        nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addNameBtn.click();
+            }
+        });
+
+
+
+        spinBtn.addEventListener('click', spin);
+
+        updateNamesList();
+        drawWheel();
+    </script>
+</body>
+</html>
