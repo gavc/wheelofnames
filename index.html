@@ -80,6 +80,16 @@
             background-color: #27ae60;
         }
 
+        #spinBtn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        #spinBtn:disabled:hover {
+            background-color: #95a5a6;
+        }
+
         #namesList {
             list-style: none;
             padding: 0;
@@ -257,6 +267,7 @@
         let colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#1abc9c'];
         let currentAngle = 0;
         let spinTimeout = null;
+        let isSpinning = false;
 
         const drawWheel = () => {
             const arcSize = 2 * Math.PI / names.length;
@@ -317,6 +328,16 @@
         };
 
         const spin = () => {
+            // Prevent multiple concurrent spins
+            if (isSpinning) {
+                return;
+            }
+
+            // Set spinning state and disable button
+            isSpinning = true;
+            spinBtn.disabled = true;
+            spinBtn.textContent = 'Spinning...';
+
             let spinAngle;
             const steveWIndex = names.indexOf('Steve W.');
 
@@ -354,11 +375,13 @@
                     const winner = names[winningIndex];
                     
                     // Celebrate!
-                    confetti({
-                        particleCount: 150,
-                        spread: 90,
-                        origin: { y: 0.6 }
-                    });
+                    if (typeof confetti !== 'undefined') {
+                        confetti({
+                            particleCount: 150,
+                            spread: 90,
+                            origin: { y: 0.6 }
+                        });
+                    }
 
                     setTimeout(() => {
                         winnerNameDisplay.innerHTML = 'Congratulations!<br>' + winner;
@@ -369,6 +392,11 @@
                             updateNamesList();
                             drawWheel();
                         }
+
+                        // Reset spinning state and re-enable button
+                        isSpinning = false;
+                        spinBtn.disabled = false;
+                        spinBtn.textContent = 'Spin!';
                     }, 100);
                 }
             };
@@ -519,6 +547,12 @@
 
         winnerOverlayCloseBtn.addEventListener('click', () => {
             winnerOverlay.style.display = 'none';
+            // Ensure button is re-enabled when winner overlay is closed
+            if (isSpinning) {
+                isSpinning = false;
+                spinBtn.disabled = false;
+                spinBtn.textContent = 'Spin!';
+            }
         });
 
         // Enhanced name parsing function
