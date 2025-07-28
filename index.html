@@ -150,6 +150,51 @@
             transform: translateY(-50%);
             cursor: pointer;
         }
+
+        #nameFeedback {
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        #nameFeedback.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        #nameFeedback.warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        #nameFeedback.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .bulk-controls button {
+            font-size: 12px;
+            padding: 8px 12px;
+            margin: 0 2px;
+        }
+
+        #toggleInputBtn, #clearAllBtn, #sortNamesBtn {
+            font-size: 12px;
+            padding: 6px 10px;
+            margin: 0 2px;
+        }
+
+        #namePreview {
+            font-style: italic;
+        }
+
+        .controls {
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -157,15 +202,28 @@
         <h1>Wheel of Names</h1>
         <canvas id="wheelCanvas" width="400" height="400"></canvas>
         <div class="controls">
-            <input type="text" id="nameInput" placeholder="Enter a name">
-            <button id="addNameBtn">Add Name</button>
+            <input type="text" id="nameInput" placeholder="Enter name(s) - separate with comma, semicolon, or newline">
+            <button id="addNameBtn">Add Name(s)</button>
             <button id="spinBtn">Spin!</button>
             <div style="margin-top: 10px;">
                 <input type="checkbox" id="removeWinnerCheckbox">
                 <label for="removeWinnerCheckbox">Remove Winner</label>
             </div>
+            <div style="margin-top: 10px;">
+                <button id="toggleInputBtn">📝 Multi-line Input</button>
+                <button id="clearAllBtn">🗑️ Clear All</button>
+                <button id="sortNamesBtn">🔤 Sort A-Z</button>
+            </div>
+            <div id="nameFeedback" style="margin-top: 10px; padding: 8px; border-radius: 4px; display: none;"></div>
         </div>
-        <h2>Names:</h2>
+        <div id="bulkInputArea" style="display: none; margin-bottom: 20px; width: 100%; max-width: 500px;">
+            <textarea id="bulkNameInput" placeholder="Enter multiple names (one per line, or separated by commas/semicolons)&#10;&#10;Examples:&#10;Alice&#10;Bob&#10;Charlie&#10;&#10;Or: Alice, Bob, Charlie&#10;Or: Alice; Bob; Charlie" style="width: 100%; height: 120px; padding: 10px; border: 2px solid var(--light-gray); border-radius: 5px; font-size: 14px; resize: vertical;"></textarea>
+            <div style="margin-top: 5px; display: flex; gap: 10px; justify-content: space-between; align-items: center;">
+                <button id="addBulkNamesBtn">Add Names</button>
+                <span id="namePreview" style="color: #666; font-size: 12px;"></span>
+            </div>
+        </div>
+        <h2 id="namesHeader">Names:</h2>
         <ul id="namesList"></ul>
         <div id="winnerOverlay">
             <span id="winnerNameDisplay"></span>
@@ -185,6 +243,15 @@
         const winnerNameDisplay = document.getElementById('winnerNameDisplay');
         const winnerOverlayCloseBtn = document.getElementById('winnerOverlayCloseBtn');
         const removeWinnerCheckbox = document.getElementById('removeWinnerCheckbox');
+        const toggleInputBtn = document.getElementById('toggleInputBtn');
+        const bulkInputArea = document.getElementById('bulkInputArea');
+        const bulkNameInput = document.getElementById('bulkNameInput');
+        const addBulkNamesBtn = document.getElementById('addBulkNamesBtn');
+        const namePreview = document.getElementById('namePreview');
+        const nameFeedback = document.getElementById('nameFeedback');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const sortNamesBtn = document.getElementById('sortNamesBtn');
+        const namesHeader = document.getElementById('namesHeader');
 
         let names = ['Alice', 'Bob', 'Charlie', 'David'];
         let colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#1abc9c'];
@@ -229,6 +296,9 @@
         };
 
         const updateNamesList = () => {
+            // Update header with count
+            namesHeader.textContent = `Names: (${names.length})`;
+            
             namesList.innerHTML = '';
             names.forEach((name, index) => {
                 const li = document.createElement('li');
@@ -306,18 +376,271 @@
             requestAnimationFrame(animate);
         };
 
+        // Show feedback for name operations
+        const showNameFeedback = (validation, totalParsed) => {
+            let message = '';
+            let className = '';
+            
+            if (validation.valid.length > 0) {
+                message += `✅ ${validation.valid.length} name(s) will be added. `;
+                className = 'success';
+            }
+            
+            if (validation.duplicates.length > 0) {
+                message += `⚠️ ${validation.duplicates.length} duplicate(s) found. `;
+                className = 'warning';
+            }
+            
+            if (validation.invalid.length > 0) {
+                message += `❌ ${validation.invalid.length} invalid name(s) skipped. `;
+                className = 'error';
+            }
+            
+            if (message) {
+                nameFeedback.textContent = message;
+                nameFeedback.className = className;
+                nameFeedback.style.display = 'block';
+                setTimeout(() => {
+                    nameFeedback.style.display = 'none';
+                }, 5000);
+            }
+        };
+
+        // Toggle between single-line and multi-line input
+        const toggleInputMode = () => {
+            const isMultiLine = bulkInputArea.style.display !== 'none';
+            if (isMultiLine) {
+                bulkInputArea.style.display = 'none';
+                toggleInputBtn.textContent = '📝 Multi-line Input';
+                nameInput.style.display = 'inline-block';
+                addNameBtn.style.display = 'inline-block';
+            } else {
+                bulkInputArea.style.display = 'block';
+                toggleInputBtn.textContent = '📝 Single-line Input';
+                nameInput.style.display = 'none';
+                addNameBtn.style.display = 'none';
+            }
+        };
+
+        // Update name preview for bulk input
+        const updateNamePreview = () => {
+            const input = bulkNameInput.value.trim();
+            if (!input) {
+                namePreview.textContent = '';
+                return;
+            }
+            
+            const parsedNames = parseNames(input);
+            const validation = validateNames(parsedNames);
+            
+            let preview = '';
+            if (validation.valid.length > 0) {
+                preview += `${validation.valid.length} valid`;
+            }
+            if (validation.duplicates.length > 0) {
+                preview += preview ? ', ' : '';
+                preview += `${validation.duplicates.length} duplicate(s)`;
+            }
+            if (validation.invalid.length > 0) {
+                preview += preview ? ', ' : '';
+                preview += `${validation.invalid.length} invalid`;
+            }
+            
+            namePreview.textContent = preview ? `Preview: ${preview}` : '';
+        };
+
+        // Clear all names
+        const clearAllNames = () => {
+            if (names.length > 0 && confirm(`Remove all ${names.length} names from the wheel?`)) {
+                names.length = 0;
+                updateNamesList();
+                drawWheel();
+                showSimpleFeedback('All names cleared', 'success');
+            }
+        };
+
+        // Sort names alphabetically
+        const sortNames = () => {
+            if (names.length > 1) {
+                names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+                updateNamesList();
+                drawWheel();
+                showSimpleFeedback('Names sorted alphabetically', 'success');
+            }
+        };
+
+        // Simple feedback for basic operations
+        const showSimpleFeedback = (message, type) => {
+            nameFeedback.textContent = message;
+            nameFeedback.className = type;
+            nameFeedback.style.display = 'block';
+            setTimeout(() => {
+                nameFeedback.style.display = 'none';
+            }, 3000);
+        };
+
+        // Event listeners
+        toggleInputBtn.addEventListener('click', toggleInputMode);
+        
+        bulkNameInput.addEventListener('input', updateNamePreview);
+        
+        addBulkNamesBtn.addEventListener('click', () => {
+            const inputNames = bulkNameInput.value.trim();
+            if (inputNames) {
+                const parsedNames = parseNames(inputNames);
+                const validation = validateNames(parsedNames);
+                
+                // Show feedback
+                showNameFeedback(validation, parsedNames.length);
+                
+                // Add valid names
+                if (validation.valid.length > 0) {
+                    names.push(...validation.valid);
+                    bulkNameInput.value = '';
+                    updateNamesList();
+                    drawWheel();
+                    updateNamePreview();
+                }
+                
+                // Handle duplicates with confirmation
+                if (validation.duplicates.length > 0) {
+                    const duplicateMsg = `Found ${validation.duplicates.length} duplicate name(s): ${validation.duplicates.join(', ')}. Add anyway?`;
+                    if (confirm(duplicateMsg)) {
+                        names.push(...validation.duplicates);
+                        updateNamesList();
+                        drawWheel();
+                    }
+                }
+            }
+        });
+        
+        clearAllBtn.addEventListener('click', clearAllNames);
+        sortNamesBtn.addEventListener('click', sortNames);
+
         winnerOverlayCloseBtn.addEventListener('click', () => {
             winnerOverlay.style.display = 'none';
         });
 
+        // Enhanced name parsing function
+        const parseNames = (input) => {
+            if (!input || !input.trim()) return [];
+            
+            const separators = [',', ';', '\n', '\t'];
+            let detectedSeparator = ','; // default
+            
+            // Auto-detect separator by finding the most common one
+            for (const sep of separators) {
+                if (input.includes(sep)) {
+                    detectedSeparator = sep;
+                    break;
+                }
+            }
+            
+            // Handle quoted names that might contain separators
+            const quotedNameRegex = /["']([^"']+)["']/g;
+            const quotedNames = [];
+            let quotedInput = input;
+            
+            // Extract quoted names first
+            let match;
+            while ((match = quotedNameRegex.exec(input)) !== null) {
+                quotedNames.push(match[1].trim());
+                quotedInput = quotedInput.replace(match[0], '|||QUOTED|||');
+            }
+            
+            // Split by detected separator and process
+            const rawNames = quotedInput.split(detectedSeparator);
+            const processedNames = [];
+            let quotedIndex = 0;
+            
+            rawNames.forEach(name => {
+                if (name.includes('|||QUOTED|||')) {
+                    if (quotedIndex < quotedNames.length) {
+                        processedNames.push(quotedNames[quotedIndex++]);
+                    }
+                } else {
+                    const trimmed = name.trim();
+                    if (trimmed && trimmed.length > 0) {
+                        processedNames.push(trimmed);
+                    }
+                }
+            });
+            
+            return processedNames;
+        };
+
+        // Validate and sanitize names
+        const validateNames = (nameList) => {
+            const results = {
+                valid: [],
+                duplicates: [],
+                invalid: [],
+                warnings: []
+            };
+            
+            const existingNames = names.map(n => n.toLowerCase());
+            const processedNames = new Set();
+            
+            nameList.forEach(name => {
+                // Length validation
+                if (name.length < 1) {
+                    results.invalid.push({ name, reason: 'Name too short' });
+                    return;
+                }
+                if (name.length > 50) {
+                    results.invalid.push({ name, reason: 'Name too long (max 50 characters)' });
+                    return;
+                }
+                
+                // Title case normalization
+                const normalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+                const lowerName = normalizedName.toLowerCase();
+                
+                // Check for duplicates in existing names
+                if (existingNames.includes(lowerName)) {
+                    results.duplicates.push(normalizedName);
+                    return;
+                }
+                
+                // Check for duplicates in current batch
+                if (processedNames.has(lowerName)) {
+                    results.duplicates.push(normalizedName);
+                    return;
+                }
+                
+                processedNames.add(lowerName);
+                results.valid.push(normalizedName);
+            });
+            
+            return results;
+        };
+
         addNameBtn.addEventListener('click', () => {
             const inputNames = nameInput.value.trim();
             if (inputNames) {
-                const newNames = inputNames.split(',').map(name => name.trim()).filter(name => name !== '');
-                names.push(...newNames);
-                nameInput.value = '';
-                updateNamesList();
-                drawWheel();
+                const parsedNames = parseNames(inputNames);
+                const validation = validateNames(parsedNames);
+                
+                // Show feedback
+                showNameFeedback(validation, parsedNames.length);
+                
+                // Add valid names
+                if (validation.valid.length > 0) {
+                    names.push(...validation.valid);
+                    nameInput.value = '';
+                    updateNamesList();
+                    drawWheel();
+                }
+                
+                // Handle duplicates with confirmation
+                if (validation.duplicates.length > 0) {
+                    const duplicateMsg = `Found ${validation.duplicates.length} duplicate name(s): ${validation.duplicates.join(', ')}. Add anyway?`;
+                    if (confirm(duplicateMsg)) {
+                        names.push(...validation.duplicates);
+                        updateNamesList();
+                        drawWheel();
+                    }
+                }
             }
         });
 
