@@ -11,6 +11,7 @@
             --background-color: #ecf0f1;
             --font-color: #2c3e50;
             --light-gray: #bdc3c7;
+            --firework-colors: #ff0000, #00ff00, #0000ff, #ffff00, #ff00ff, #00ffff, #ff8800, #8800ff;
         }
 
         body {
@@ -23,6 +24,7 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
+            overflow-x: hidden;
         }
 
         h1 {
@@ -136,7 +138,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
+            background: linear-gradient(45deg, rgba(45,52,54,0.95), rgba(41,128,185,0.95));
             color: white;
             padding: 40px 80px;
             min-width: 250px;
@@ -145,8 +147,18 @@
             font-weight: bold;
             display: none; /* Hidden by default */
             z-index: 1000;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
             text-align: center;
+            animation: winner-glow 1.5s infinite alternate;
+        }
+        
+        @keyframes winner-glow {
+            from {
+                box-shadow: 0 0 20px rgba(41,128,185,0.7);
+            }
+            to {
+                box-shadow: 0 0 30px rgba(52,152,219,0.9);
+            }
         }
 
         #winnerOverlay button {
@@ -191,6 +203,61 @@
             padding: 8px 12px;
             margin: 0 2px;
         }
+        
+        /* Fireworks CSS */
+        .firework-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+            display: none;
+        }
+        
+        .firework {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            transform-origin: center;
+            animation: firework-explosion 1s ease-out forwards;
+        }
+        
+        .firework::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transform: scale(0.85);
+            animation: firework-fade 1s ease-out forwards;
+            background-color: currentColor;
+        }
+        
+        @keyframes firework-explosion {
+            0% {
+                transform: translate(0, 60vh) scale(0);
+                opacity: 1;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--x), var(--y)) scale(1);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes firework-fade {
+            0%, 50% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
 
         #toggleInputBtn, #clearAllBtn, #sortNamesBtn {
             font-size: 12px;
@@ -208,6 +275,7 @@
     </style>
 </head>
 <body>
+    <div class="firework-container" id="fireworkContainer"></div>
     <div class="container">
         <h1>Wheel of Names</h1>
         <canvas id="wheelCanvas" width="400" height="400"></canvas>
@@ -262,12 +330,14 @@
         const clearAllBtn = document.getElementById('clearAllBtn');
         const sortNamesBtn = document.getElementById('sortNamesBtn');
         const namesHeader = document.getElementById('namesHeader');
+        const fireworkContainer = document.getElementById('fireworkContainer');
 
         let names = ['Alice', 'Bob', 'Charlie', 'David'];
         let colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#1abc9c'];
         let currentAngle = 0;
         let spinTimeout = null;
         let isSpinning = false;
+        let fireworksActive = false;
 
         const drawWheel = () => {
             ctx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
@@ -401,14 +471,36 @@
                     const winningIndex = Math.floor(winningAngle / arcSize);
                     const winner = names[winningIndex];
                     
-                    // Celebrate!
+                    // Celebrate with confetti and fireworks!
                     if (typeof confetti !== 'undefined') {
                         confetti({
-                            particleCount: 150,
-                            spread: 90,
+                            particleCount: 200,
+                            spread: 100,
                             origin: { y: 0.6 }
                         });
+                        
+                        // Second confetti burst after a short delay
+                        setTimeout(() => {
+                            confetti({
+                                particleCount: 100,
+                                angle: 60,
+                                spread: 55,
+                                origin: { x: 0.2, y: 0.6 }
+                            });
+                        }, 500);
+                        
+                        setTimeout(() => {
+                            confetti({
+                                particleCount: 100,
+                                angle: 120,
+                                spread: 55,
+                                origin: { x: 0.8, y: 0.6 }
+                            });
+                        }, 700);
                     }
+                    
+                    // Launch CSS fireworks
+                    createFireworks();
 
                     setTimeout(() => {
                         winnerNameDisplay.innerHTML = 'Congratulations!<br>' + winner;
@@ -532,6 +624,75 @@
             setTimeout(() => {
                 nameFeedback.style.display = 'none';
             }, 3000);
+        };
+
+        // Create fireworks effect
+        const createFireworks = () => {
+            if (fireworksActive) return;
+            fireworksActive = true;
+
+            fireworkContainer.style.display = 'block';
+            let fireworkCount = 0;
+            const totalFireworks = 8;
+            const intervalId = setInterval(() => {
+                if (fireworkCount >= totalFireworks) {
+                    clearInterval(intervalId);
+                    setTimeout(() => {
+                        fireworkContainer.innerHTML = '';
+                        fireworkContainer.style.display = 'none';
+                        fireworksActive = false;
+                    }, 2000);
+                    return;
+                }
+                
+                launchFirework();
+                fireworkCount++;
+            }, 300);
+        };
+
+        const launchFirework = () => {
+            const fireworkColors = [
+                '#ff0000', '#00ff00', '#0000ff', '#ffff00', 
+                '#ff00ff', '#00ffff', '#ff8800', '#8800ff'
+            ];
+            
+            // Create firework elements
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            
+            // Random position and color
+            const startX = Math.random() * window.innerWidth;
+            const color = fireworkColors[Math.floor(Math.random() * fireworkColors.length)];
+            firework.style.left = `${startX}px`;
+            firework.style.color = color;
+            
+            // Create particles
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'firework';
+                
+                // Random direction for particles
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 30 + Math.random() * 70;
+                const x = Math.cos(angle) * distance;
+                const y = Math.sin(angle) * distance - 100; // Adjust y to make it appear higher
+                
+                particle.style.setProperty('--x', `${x}px`);
+                particle.style.setProperty('--y', `${y}px`);
+                particle.style.left = `${startX}px`;
+                particle.style.bottom = '0px';
+                particle.style.color = color;
+                particle.style.animationDelay = `${Math.random() * 0.3}s`;
+                
+                fireworkContainer.appendChild(particle);
+                
+                // Remove particles after animation completes
+                setTimeout(() => {
+                    if (fireworkContainer.contains(particle)) {
+                        fireworkContainer.removeChild(particle);
+                    }
+                }, 1500);
+            }
         };
 
         // Event listeners
