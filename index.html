@@ -12,6 +12,7 @@
             --font-color: #2c3e50;
             --light-gray: #bdc3c7;
             --firework-colors: #ff0000, #00ff00, #0000ff, #ffff00, #ff00ff, #00ffff, #ff8800, #8800ff;
+            --winner-glow-color: rgba(41,128,185,0.9);
         }
 
         body {
@@ -154,10 +155,10 @@
         
         @keyframes winner-glow {
             from {
-                box-shadow: 0 0 20px rgba(41,128,185,0.7);
+                box-shadow: 0 0 20px rgba(0,0,0,0.7);
             }
             to {
-                box-shadow: 0 0 30px rgba(52,152,219,0.9);
+                box-shadow: 0 0 30px var(--winner-glow-color);
             }
         }
 
@@ -471,6 +472,9 @@
                     const winningIndex = Math.floor(winningAngle / arcSize);
                     const winner = names[winningIndex];
                     
+                    // Get the winner's segment color
+                    const winnerColor = colors[winningIndex % colors.length];
+                    
                     // Celebrate with confetti and fireworks!
                     if (typeof confetti !== 'undefined') {
                         confetti({
@@ -503,6 +507,12 @@
                     createFireworks();
 
                     setTimeout(() => {
+                        // Set winner overlay gradient with the winner's color
+                        winnerOverlay.style.background = `linear-gradient(45deg, rgba(45,52,54,0.95), ${winnerColor}DD)`;
+                        
+                        // Update the CSS variable for the glow animation
+                        document.documentElement.style.setProperty('--winner-glow-color', `${winnerColor}DD`);
+                        
                         winnerNameDisplay.innerHTML = 'Congratulations!<br>' + winner;
                         winnerOverlay.style.display = 'block';
 
@@ -735,6 +745,10 @@
 
         winnerOverlayCloseBtn.addEventListener('click', () => {
             winnerOverlay.style.display = 'none';
+            // Reset the overlay style for next use
+            winnerOverlay.style.background = '';
+            document.documentElement.style.removeProperty('--winner-glow-color');
+            
             // Ensure button is re-enabled when winner overlay is closed
             if (isSpinning) {
                 isSpinning = false;
