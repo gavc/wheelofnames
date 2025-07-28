@@ -15,7 +15,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--background-color);
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             color: var(--font-color);
             display: flex;
             flex-direction: column;
@@ -264,7 +264,7 @@
         const namesHeader = document.getElementById('namesHeader');
 
         let names = ['Alice', 'Bob', 'Charlie', 'David'];
-        let colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#1abc9c'];
+        let colors = ['#6c7b8a', '#8fa1b3', '#a7c0cd', '#c9d6df', '#e8eef2', '#b8c6db'];
         let currentAngle = 0;
         let spinTimeout = null;
         let isSpinning = false;
@@ -401,13 +401,50 @@
                     const winningIndex = Math.floor(winningAngle / arcSize);
                     const winner = names[winningIndex];
                     
-                    // Celebrate!
+                    // Enhanced celebration with multiple confetti bursts and fireworks effect
                     if (typeof confetti !== 'undefined') {
+                        // Initial burst of confetti
                         confetti({
-                            particleCount: 150,
+                            particleCount: 200,
                             spread: 90,
-                            origin: { y: 0.6 }
+                            origin: { y: 0.6 },
+                            colors: ['#6c7b8a', '#8fa1b3', '#a7c0cd', '#c9d6df', '#e8eef2', '#b8c6db']
                         });
+                        
+                        // Secondary burst with different angle
+                        setTimeout(() => {
+                            confetti({
+                                particleCount: 150,
+                                spread: 120,
+                                origin: { y: 0.7 },
+                                colors: ['#6c7b8a', '#8fa1b3', '#a7c0cd', '#c9d6df', '#e8eef2', '#b8c6db']
+                            });
+                        }, 200);
+                        
+                        // Fireworks effect - burst from different positions
+                        setTimeout(() => {
+                            confetti({
+                                particleCount: 50,
+                                spread: 360,
+                                startVelocity: 30,
+                                decay: 0.9,
+                                gravity: 1,
+                                origin: { x: 0.3, y: 0.3 },
+                                colors: ['#6c7b8a', '#8fa1b3', '#a7c0cd']
+                            });
+                        }, 400);
+                        
+                        setTimeout(() => {
+                            confetti({
+                                particleCount: 50,
+                                spread: 360,
+                                startVelocity: 30,
+                                decay: 0.9,
+                                gravity: 1,
+                                origin: { x: 0.7, y: 0.3 },
+                                colors: ['#c9d6df', '#e8eef2', '#b8c6db']
+                            });
+                        }, 600);
                     }
 
                     setTimeout(() => {
