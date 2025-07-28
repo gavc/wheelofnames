@@ -525,44 +525,36 @@
         const parseNames = (input) => {
             if (!input || !input.trim()) return [];
             
-            const separators = [',', ';', '\n', '\t'];
-            let detectedSeparator = ','; // default
-            
-            // Auto-detect separator by finding the most common one
-            for (const sep of separators) {
-                if (input.includes(sep)) {
-                    detectedSeparator = sep;
-                    break;
-                }
-            }
-            
             // Handle quoted names that might contain separators
             const quotedNameRegex = /["']([^"']+)["']/g;
             const quotedNames = [];
-            let quotedInput = input;
+            let workingInput = input;
             
-            // Extract quoted names first
+            // Extract quoted names first and replace with placeholders
             let match;
             while ((match = quotedNameRegex.exec(input)) !== null) {
                 quotedNames.push(match[1].trim());
-                quotedInput = quotedInput.replace(match[0], '|||QUOTED|||');
+                workingInput = workingInput.replace(match[0], `|||QUOTED_${quotedNames.length - 1}|||`);
             }
             
-            // Split by detected separator and process
-            const rawNames = quotedInput.split(detectedSeparator);
+            // Split by all separators using regex
+            const separatorRegex = /[,;\n\t]+/;
+            const rawNames = workingInput.split(separatorRegex);
             const processedNames = [];
-            let quotedIndex = 0;
             
             rawNames.forEach(name => {
-                if (name.includes('|||QUOTED|||')) {
+                const trimmed = name.trim();
+                if (!trimmed) return; // Skip empty entries
+                
+                // Check if this is a quoted name placeholder
+                const quotedMatch = trimmed.match(/\|\|\|QUOTED_(\d+)\|\|\|/);
+                if (quotedMatch) {
+                    const quotedIndex = parseInt(quotedMatch[1]);
                     if (quotedIndex < quotedNames.length) {
-                        processedNames.push(quotedNames[quotedIndex++]);
+                        processedNames.push(quotedNames[quotedIndex]);
                     }
                 } else {
-                    const trimmed = name.trim();
-                    if (trimmed && trimmed.length > 0) {
-                        processedNames.push(trimmed);
-                    }
+                    processedNames.push(trimmed);
                 }
             });
             
